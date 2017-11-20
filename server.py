@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
+import six
+
+if six.PY2:
+    reload(sys)
+    sys.setdefaultencoding('utf-8')
 
 from flask import Flask, request, render_template, jsonify, Response, send_file
 import os
@@ -30,10 +34,10 @@ PDFLATEX_EXISTS = distutils.spawn.find_executable("pdflatex") != None
 
 app = Flask(__name__)
 app.config.from_object(__name__) 
-print " * Overriding default configuration with config.py file"
+print(" * Overriding default configuration with config.py file")
 app.config.from_pyfile('config.py', silent=True)
 if app.debug:
-    print " * Running in debug mode"
+    print(" * Running in debug mode")
 
 
 mimetypes = {'md':'text/x-markdown', 'bib':'text/x-bibtex','html':'text/html','htm':'text/html','pdf':'application/pdf', 'latex':'application/x-latex', 'docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','epub':'application/epub+zip'}
@@ -71,19 +75,19 @@ def pandoc(filename, extension, bibpath):
     if 'ABBR_FILES' in app.config and len(app.config['ABBR_FILES']) > 0:
         abbr_file = app.config['ABBR_FILES'][0]
         options += ['--citation-abbreviations=' + os.path.join(CSL_FOLDER, abbr_file)]
-    print ' * Sending command to Pandoc for file', filename, 'with options', options
+    print(' * Sending command to Pandoc for file', filename, 'with options', options)
     p = subprocess.Popen(options, stdout=subprocess.PIPE)
     stdoutdata, stderrdata = p.communicate()
     if stderrdata:
-        print ' * Command failed:', stderrdata
+        print(' * Command failed:', stderrdata)
         return False, "Pandoc failed: " + stderrdata
     else:
-        print ' * Command was successful:', stdoutdata
+        print(' * Command was successful:', stdoutdata)
         return True, filename + '.' + extension
 
 
 def docverter(filename, extension, bibpath):
-    print ' * Sending request to Docverter for file', filename
+    print(' * Sending request to Docverter for file', filename)
     with open(path_to_file(filename + '.md')) as filestream:
         docverter_response = requests.post(app.config['DOCVERTER_URL'], data={
             'to': extension,
@@ -94,19 +98,19 @@ def docverter(filename, extension, bibpath):
                 'input_files[]': filestream 
             })
     if docverter_response.ok:
-        print ' * Request was successful:', docverter_response.status_code
+        print(' * Request was successful:', docverter_response.status_code)
         outname = filename + '.' + extension
         with open(path_to_file(outname), 'wb') as fout:
             fout.write(docverter_response.content)
         return True, outname
     else:
-        print ' * Request failed:', docverter_response.status_code
+        print(' * Request failed:', docverter_response.status_code)
         return False, docverter_response.status_code
 
 
 @app.route('/save', methods=["POST"])
 def save():
-    content = request.form.get('content', '', type=unicode)
+    content = request.form.get('content', '', type=str)
     bibtex = request.form.get('bibtex', '', type=str)
     extension = request.form.get('extension', 'md', type=str).lower()
     filename = request.form.get('filename', 'markx', type=str)
